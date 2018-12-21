@@ -1,0 +1,44 @@
+{
+    "name": "grechanyuk/comepay",
+    "description": ":description",
+    "license": "license",
+    "authors": [
+        {
+            "name": "author name",
+            "email": "author email",
+            "homepage": "author homepage"
+        }
+    ],
+    "homepage": "https://github.com/grechanyuk/comepay",
+    "keywords": ["Laravel", "Comepay"],
+    "require": {
+        "illuminate/support": "~5",
+        "guzzlehttp/guzzle": "^6.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0",
+        "mockery/mockery": "^1.1",
+        "orchestra/testbench": "~3.0",
+        "sempro/phpunit-pretty-print": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Grechanyuk\\Comepay\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Grechanyuk\\Comepay\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Grechanyuk\\Comepay\\ComepayServiceProvider"
+            ],
+            "aliases": {
+                "Comepay": "Grechanyuk\\Comepay\\Facades\\Comepay"
+            }
+        }
+    }
+}
