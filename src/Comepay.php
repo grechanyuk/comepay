@@ -7,6 +7,7 @@ use Grechanyuk\Comepay\Exceptions\ComepayException;
 use Grechanyuk\Comepay\Exceptions\ComepayFatalException;
 use Grechanyuk\Comepay\Models\ComepayPayment;
 use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Log;
 
 class Comepay
 {
@@ -57,7 +58,6 @@ class Comepay
         }
 
         $response = $this->client->put($url, [
-            'debug' => true,
             'form_params' => [
                 'user' => $user ? $user : config('comepay.user'),
                 'amount' => (float) $order->getComepayTotalAmount(),
@@ -86,8 +86,10 @@ class Comepay
                 try {
                     $this->errorResponse($response->response->result_code);
                 } catch (ComepayFatalException $e) {
+                    Log::warning('Получена фатальная ошибка модуля Comepay. ', ['error' => $e, 'response' => $response]);
                     return $e;
                 } catch (ComepayException $e) {
+                    Log::debug('Поймано исключение Comepay', ['error' => $e, 'response' => $response]);
                     return $this->createPayment($order);
                 }
             }
