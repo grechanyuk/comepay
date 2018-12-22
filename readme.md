@@ -7,28 +7,62 @@
 
 This is where your description should go. Take a look at [contributing.md](contributing.md) to see a to do list.
 
-## Installation
+## Установка
 
-Via Composer
+Composer
 
 ``` bash
 $ composer require grechanyuk/comepay
 ```
 
-## Usage
-Нюансы:
-при получении уведомления о статусе платежа создается ивент Grechanyuk\Comepay\Events\ComepayPaymentResult
-Таблица используется из пакета
+Опубликуйте файл кофигурации, в нем необходимо задать некоторые обязательные настройки:
+``` bash
+$ php artisan vendor:publish --provider="Grechanyuk\Comepay\ComepayServiceProvider" --tag="comepay.config"
+```
+
+Произведите миграцию:
+``` bash
+$ php artisan migrate
+```
+
+Реализуйте два интерфеса, благодаря которым мы можем работать с любой таблицей заказов.
+``` bash
+ComepayOrderInterface //Реализует основные данные по заказу
+ComepayOrderProductsInterface //Реализует данные по товарам в заказе
+```
+
+Из конфигурационного файла ссылку для принятия уведомлений о статусах платежа от Comepay необходимо добавить в исключения CSRF защиты.
+Для этого добавьте в файл `App\Http\Middleware\VerifyCsrfToken`:
+``` php
+protected $except = [
+        '/api/comepay/notification'
+    ];
+```
+
+В файл `Kernel.php` добавьте новый Middleware, в секцию `protected $routeMiddleware`:
+``` php
+'comepay' => \Grechanyuk\Comepay\Middleware\ComepayNotificateStatus::class,
+```
+
+##Уведомления от Comepay
+Чтобы получать уведомления от Comepay необходимо в своем личном кабинете установить
+значение CallbackURL `https://your.site/api/comepay/notification`. Данную ссылку можно изменить в 
+файле конфигурации, значение `notificationUrl`.
+При получении уведомления будет вызвант Event `ComepayPaymentResult`, который будет содерать в себе
+номер вашего заказа (`order_id`) и его статус (`status`). Данный Event можно обработать
+слушателем. о том, как пользоваться слушателями: `http://laravel.su/docs/5.4/Events`
+
+## Использование
+Чтобы создать платеж вызовите: 
+```
+$redirect = Comepay::createPayment($order)
+```
+Переменная будет содержать ссылку для перенаправления пользователя
 
 ## Change log
 
 Please see the [changelog](changelog.md) for more information on what has changed recently.
 
-## Testing
-
-``` bash
-$ composer test
-```
 
 ## Contributing
 
