@@ -7,6 +7,7 @@ use Grechanyuk\Comepay\Exceptions\ComepayException;
 use Grechanyuk\Comepay\Exceptions\ComepayFatalException;
 use Grechanyuk\Comepay\Models\ComepayPayment;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Facades\Log;
 
 class Comepay
@@ -43,7 +44,7 @@ class Comepay
     public function createPayment(ComepayOrderInterface $order, $user = false, $comment = false, $ccy = false, $payAttribute = false)
     {
         $paymentId = str_random(40);
-        $url = 'prv/' . config('comepay.shopId') . '/bills/' . $paymentId;
+        $url = 'api/prv/' . config('comepay.shopId') . '/bills/' . $paymentId;
         $products = $order->getComepayProducts()->get();
 
         $prd = [];
@@ -57,18 +58,25 @@ class Comepay
             ];
         }
 
-        $response = $this->client->put($url, [
-            'form_params' => [
-                'user' => $user ? $user : config('comepay.user'),
-                'amount' => (float) $order->getComepayTotalAmount(),
-                'ccy' => $ccy ? $ccy : config('comepay.ccy'),
-                'сomment' => $comment ? $comment : sprintf(config('comepay.comment'), $order->getComepayOrderId()),
-                'lifetime' => date(DATE_ISO8601, strtotime(config('comepay.lifetime'))),
-                'email' => $order->getComepayClientEmail(),
-                'infos' => json_encode($prd),
-                'payattribute' => $payAttribute ? $payAttribute : config('comepay.payattribute')
-            ]
-        ]);
+        try {
+            $response = $this->client->put($url, [
+                'form_params' => [
+                    'user' => $user ? $user : config('comepay.user'),
+                    'amount' => (float) $order->getComepayTotalAmount(),
+                    'ccy' => $ccy ? $ccy : config('comepay.ccy'),
+                    'сomment' => $comment ? $comment : sprintf(config('comepay.comment'), $order->getComepayOrderId()),
+                    'lifetime' => date(DATE_ISO8601, strtotime(config('comepay.lifetime'))),
+                    'email' => $order->getComepayClientEmail(),
+                    'infos' => json_encode($prd),
+                    'payattribute' => $payAttribute ? $payAttribute : config('comepay.payattribute')
+                ]
+            ]);
+        } catch (ClientException $e) {
+            Log::warning('Ошибка Comepay при формировании счета', ['error' => $e]);
+
+            return false;
+        }
+
 
         if ($response->getStatusCode() == 200) {
             //$response = $response->getBody()->getContents();
@@ -78,7 +86,7 @@ class Comepay
                 ComepayPayment::create([
                     'order_id' => $order->getComepayOrderId(),
                     'payment_id' => $paymentId,
-                    'status' => $response->response->nill->status
+                    'status' => $response->response->bill->status
                 ]);
 
                 return $this->baseUrl . 'Order/Accept?shop=' . config('comepay.shopId') . '&transaction=' . $paymentId . '&successUrl=' . config('comepay.successURL') . '&failUrl=' . config('comepay.failURL');
@@ -86,10 +94,10 @@ class Comepay
                 try {
                     $this->errorResponse($response->response->result_code);
                 } catch (ComepayFatalException $e) {
-                    Log::warning('Получена фатальная ошибка модуля Comepay. ', ['error' => $e, 'response' => $response]);
-                    return $e;
+                    Log::warning('Получена фатальная ошибка модуля Comepay. ', ['error' => $e]);
+                    return false;
                 } catch (ComepayException $e) {
-                    Log::debug('Поймано исключение Comepay', ['error' => $e, 'response' => $response]);
+                    Log::debug('Поймано исключение Comepay', ['error' => $e]);
                     return $this->createPayment($order);
                 }
             }

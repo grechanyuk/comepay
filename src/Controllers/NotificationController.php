@@ -21,7 +21,7 @@ class NotificationController {
             ]);
 
             event(new ComepayPaymentResult($payment->order_id, $payment->status));
-        } 
+        }
 
         return response('<?xml version="1.0"?> <result><result_code>0</result_code></result>', 200, [
             'Content-Type' => 'text/xml'
